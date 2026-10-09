@@ -17,7 +17,10 @@ and it never stores ticket content, only counts.
    Framework preset: **Other**. No build command is needed.
 2. In the Vercel project, **Settings → Environment Variables**, add:
    - `HELPSCOUT_APP_ID`, `HELPSCOUT_APP_SECRET`
-   - `DASHBOARD_PASSWORD`: required; the browser asks for it (any username)
+   - `DASHBOARD_USERS`: individual logins as `name:password` pairs, e.g. `asha:pw1,ravi:pw2`
+     (passwords cannot contain commas). Remove a pair and redeploy to revoke that person's access.
+   - `DASHBOARD_PASSWORD`: optional shared password that works with any username
+   - One of the two is required; the browser asks for a username and password
    - `DASHBOARD_TIMEZONE`: e.g. `Asia/Kolkata` (Vercel servers run on UTC)
 3. Recommended: **Storage → Marketplace → Upstash (Redis)**, free tier, connected to the project. This shares the
    cache between Vercel's function instances; without it, long ranges are re-read from Help Scout more often.
