@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Support Dashboard</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11, 11, 11, 0.10);
+    --series: #2a78d6;
+    --series-strong: #1c5cab;
+    --wash: rgba(42, 120, 214, 0.10);
+    --note-bg: #fff6e0;
+    --note-ink: #5c4400;
+    --error-bg: #fdecec;
+    --error-ink: #8a1f1f;
+    --s-open: #2a78d6;
+    --s-pending: #eb6834;
+    --s-closed: #1baf7a;
+    --s-other: #898781;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #ffffff;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --border: rgba(255, 255, 255, 0.10);
+      --series: #3987e5;
+      --series-strong: #6da7ec;
+      --wash: rgba(57, 135, 229, 0.16);
+      --note-bg: #3a2f10;
+      --note-ink: #f5d98a;
+      --error-bg: #3d1b1b;
+      --error-ink: #f3b0b0;
+      --s-open: #3987e5;
+      --s-pending: #d95926;
+      --s-closed: #199e70;
+      --s-other: #898781;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --series: #3987e5;
+    --series-strong: #6da7ec;
+    --wash: rgba(57, 135, 229, 0.16);
+    --note-bg: #3a2f10;
+    --note-ink: #f5d98a;
+    --error-bg: #3d1b1b;
+    --error-ink: #f3b0b0;
+    --s-open: #3987e5;
+    --s-pending: #d95926;
+    --s-closed: #199e70;
+    --s-other: #898781;
+  }
+
+  * { box-sizing: border-box; }
+  .tiles > *, .grid4 > *, .row > * { min-width: 0; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+  header.top {
+    display: flex; flex-wrap: wrap; gap: 16px;
+    align-items: flex-end; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  h1 { font-size: 22px; font-weight: 600; margin: 0; }
+  h2 { font-size: 14px; font-weight: 600; margin: 0 0 12px; }
+  .sub { color: var(--ink-2); margin: 2px 0 0; }
+
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  .seg {
+    display: inline-flex; padding: 2px;
+    border: 1px solid var(--border); border-radius: 8px; background: var(--surface);
+  }
+  .seg button, .btn {
+    font: inherit; color: var(--ink-2); background: none; border: 0;
+    padding: 6px 12px; border-radius: 6px; cursor: pointer;
+  }
+  .seg button:hover, .btn:hover { color: var(--ink); background: var(--wash); }
+  .seg button[aria-checked="true"] { color: var(--ink); background: var(--wash); font-weight: 600; }
+  .btn { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; }
+  .btn:disabled { opacity: 0.6; cursor: progress; }
+  button:focus-visible { outline: 2px solid var(--series); outline-offset: 1px; }
+
+  .banner { border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; background: var(--note-bg); color: var(--note-ink); }
+  .banner.error { background: var(--error-bg); color: var(--error-ink); }
+  .banner p { margin: 0; }
+  .banner p + p { margin-top: 4px; }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px 18px;
+  }
+  .tiles { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .tile .label { color: var(--ink-2); }
+  .tile .value { font-size: 30px; font-weight: 600; margin-top: 4px; line-height: 1.15; }
+  .tile.hero .value { font-size: 48px; }
+  .tile .note { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+  .chart-card { margin-bottom: 12px; }
+  .chart { position: relative; height: 260px; }
+  .chart svg { display: block; }
+  .chart .grid { stroke: var(--grid); stroke-width: 1; }
+  .chart .axis { stroke: var(--axis); stroke-width: 1; }
+  .chart .tick { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .chart .bar { fill: var(--series); }
+  .chart .bar.on { fill: var(--series-strong); }
+  .chart .hit { fill: transparent; cursor: default; }
+  details { margin-top: 10px; color: var(--ink-2); }
+  summary { cursor: pointer; font-size: 12px; }
+
+  .grid4 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .span2 { grid-column: 1 / -1; }
+  .hint { color: var(--muted); font-size: 12px; margin: -8px 0 12px; }
+
+  .rows { display: grid; gap: 8px; }
+  .row { display: grid; grid-template-columns: minmax(80px, 34%) 1fr auto; align-items: center; gap: 10px; padding: 2px 0; }
+  .row:hover .fill { background: var(--series-strong); }
+  .row .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+  .row .track { height: 12px; }
+  .row .fill { height: 100%; background: var(--series); border-radius: 0 4px 4px 0; min-width: 2px; }
+  .row .num, td.num { color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
+  .row .num { min-width: 64px; }
+  .more { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .company-layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+  .company-detail { position: sticky; top: 16px; border-left: 1px solid var(--grid); padding-left: 24px; min-height: 120px; }
+  .company-detail h3 { font-size: 15px; font-weight: 600; margin: 0; overflow-wrap: anywhere; }
+  .detail-head { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+  .close { font: inherit; font-size: 18px; line-height: 1; background: none; border: 0; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 6px; }
+  .close:hover { color: var(--ink); background: var(--wash); }
+  .pie { display: block; margin: 12px auto 8px; }
+  .pie .slice { stroke: var(--surface); stroke-width: 2; }
+  .pie .slice:hover { opacity: 0.85; }
+  .pie .total { fill: var(--ink); font-size: 26px; font-weight: 600; }
+  .pie .total-label { fill: var(--muted); font-size: 12px; }
+  .legend { display: grid; gap: 6px; margin-top: 8px; }
+  .legend-row { display: grid; grid-template-columns: 12px 1fr auto 44px; gap: 8px; align-items: center; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; }
+  .legend-row .n { font-variant-numeric: tabular-nums; text-align: right; }
+  .legend-row .p { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
+  .row.clickable { cursor: pointer; border-radius: 6px; padding: 2px 6px; margin: 0 -6px; }
+  .row.clickable:hover, .row.selected { background: var(--wash); }
+  .row.clickable:focus-visible { outline: 2px solid var(--series); outline-offset: 1px; }
+  .link { font: inherit; font-size: 12px; background: none; border: 0; padding: 4px 0; margin-top: 8px; color: var(--series); cursor: pointer; }
+  .link:hover { text-decoration: underline; }
+  .empty { color: var(--muted); margin: 8px 0; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 6px 4px; border-bottom: 1px solid var(--grid); text-align: left; }
+  th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  th.num { text-align: right; }
+  tr:last-child td { border-bottom: 0; }
+  td.muted { color: var(--ink-2); font-style: italic; }
+
+  .tip {
+    position: fixed; z-index: 10; pointer-events: none;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--border); border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    padding: 8px 10px; font-size: 12px; max-width: 240px;
+  }
+  .tip .t { color: var(--ink-2); }
+  .tip .v { font-weight: 600; font-size: 14px; }
+
+  @media (max-width: 860px) {
+    .company-layout { grid-template-columns: 1fr; }
+    .company-detail { position: static; border-left: 0; padding-left: 0; border-top: 1px solid var(--grid); padding-top: 16px; }
+    .tiles { grid-template-columns: 1fr 1fr; }
+    .grid4 { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 520px) {
+    .wrap { padding: 16px; }
+    .tile.hero .value { font-size: 40px; }
+    .tile .value { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Support tickets</h1>
+      <p class="sub" id="meta">Loading…</p>
+    </div>
+    <div class="controls">
+      <div class="seg" role="radiogroup" aria-label="Time range" id="ranges">
+        <button role="radio" data-range="7d">7 days</button>
+        <button role="radio" data-range="30d">30 days</button>
+        <button role="radio" data-range="lastmonth">Last month</button>
+        <button role="radio" data-range="6m">6 months</button>
+        <button role="radio" data-range="12m">12 months</button>
+      </div>
+      <button class="btn" id="refresh">Refresh</button>
+    </div>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <section class="tiles">
+    <div class="card tile hero">
+      <div class="label">Tickets created</div>
+      <div class="value" id="t-created">–</div>
+      <div class="note" id="t-created-note"></div>
+    </div>
+    <div class="card tile">
+      <div class="label">Open now</div>
+      <div class="value" id="t-open">–</div>
+      <div class="note">All mailboxes</div>
+    </div>
+    <div class="card tile">
+      <div class="label">Pending now</div>
+      <div class="value" id="t-pending">–</div>
+      <div class="note">All mailboxes</div>
+    </div>
+    <div class="card tile">
+      <div class="label">Closed</div>
+      <div class="value" id="t-closed">–</div>
+      <div class="note">Of tickets created in this period</div>
+    </div>
+  </section>
+
+  <section class="card chart-card">
+    <h2 id="chart-title">Tickets created</h2>
+    <div class="chart" id="chart"></div>
+    <details>
+      <summary>Show as table</summary>
+      <table id="chart-table"></table>
+    </details>
+  </section>
+
+  <section class="grid4">
+    <div class="card">
+      <h2>By mailbox</h2>
+      <div id="b-mailbox"></div>
+    </div>
+    <div class="card">
+      <h2>By channel</h2>
+      <div id="b-channel"></div>
+    </div>
+    <div class="card">
+      <h2>By tag</h2>
+      <p class="hint">A ticket can have several tags, or none.</p>
+      <div id="b-tag"></div>
+    </div>
+    <div class="card">
+      <h2>By agent</h2>
+      <p class="hint">Tickets created in this period, by current assignee and by who closed them.</p>
+      <div id="b-agent"></div>
+    </div>
+    <div class="card span2">
+      <h2 id="company-title">By company</h2>
+      <p class="hint" id="company-hint"></p>
+      <div class="company-layout">
+        <div id="b-company"></div>
+        <aside class="company-detail" id="company-detail" aria-live="polite"></aside>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="tip" id="tip" hidden></div>
+
+<script>
+  const RANGE_KEYS = ['7d', '30d', 'lastmonth', '6m', '12m'];
+  const LONG_RANGES = ['6m', '12m'];
+  const $ = (id) => document.getElementById(id);
+  const fmt = (n) => Number(n).toLocaleString();
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const pct = (n, total) => (total ? Math.round((n / total) * 100) : 0) + '%';
+
+  const state = { range: loadRange(), data: null, requestId: 0, showAllCompanies: false, selectedCompany: companyFromHash() };
+
+  function companyFromHash() {
+    const m = /^#company=(.+)$/.exec(location.hash);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+
+  const STATUSES = [
+    { key: 'open', label: 'Open', color: 'var(--s-open)' },
+    { key: 'pending', label: 'Pending', color: 'var(--s-pending)' },
+    { key: 'closed', label: 'Closed', color: 'var(--s-closed)' },
+    { key: 'other', label: 'Spam / other', color: 'var(--s-other)' },
+  ];
+
+  function loadRange() {
+    try {
+      const saved = localStorage.getItem('hs-range');
+      if (RANGE_KEYS.includes(saved)) return saved;
+    } catch (e) {}
+    return '7d';
+  }
+
+  function saveRange(r) {
+    try { localStorage.setItem('hs-range', r); } catch (e) {}
+  }
+
+  // ---------- Loading ----------
+
+  async function load(refresh = false) {
+    const id = ++state.requestId;
+    setBusy(true);
+    if (!state.data || state.data.range !== state.range) {
+      $('meta').textContent = LONG_RANGES.includes(state.range)
+        ? 'Loading from Help Scout… the first load of a long range can take a minute or two'
+        : 'Loading data from Help Scout…';
+    }
+    try {
+      const res = await fetch(`/api/summary?range=${state.range}${refresh ? '&refresh=1' : ''}`);
+      if (res.status === 401) return location.reload();
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error || `Request failed (${res.status})`);
+      if (id !== state.requestId) return;
+      state.data = body;
+      render();
+    } catch (err) {
+      if (id !== state.requestId) return;
+      showBanner([err.message], true);
+      $('meta').textContent = 'Could not load data';
+    } finally {
+      if (id === state.requestId) setBusy(false);
+    }
+  }
+
+  function setBusy(busy) {
+    const b = $('refresh');
+    b.disabled = busy;
+    b.textContent = busy ? 'Loading…' : 'Refresh';
+  }
+
+  function showBanner(lines, isError) {
+    const el = $('banner');
+    el.hidden = !lines.length;
+    el.className = 'banner' + (isError ? ' error' : '');
+    el.innerHTML = lines.map((l) => `<p>${esc(l)}</p>`).join('');
+  }
+
+  // ---------- Rendering ----------
+
+  // Dates are shown in the dashboard's configured time zone, matching how the server grouped them.
+  function bucketLabel(isoStr, unit, long) {
+    const d = new Date(isoStr);
+    const timeZone = state.data.timeZone;
+    if (unit === 'month') {
+      return d.toLocaleDateString(undefined, long ? { month: 'long', year: 'numeric', timeZone } : { month: 'short', year: '2-digit', timeZone });
+    }
+    if (!long) return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', timeZone });
+    return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric', timeZone });
+  }
+
+  function render() {
+    const d = state.data;
+    const total = d.created.total;
+
+    document.querySelectorAll('#ranges button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.range === d.range)));
+    const updated = new Date(d.fetchedAt).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    $('meta').textContent = `${d.rangeLabel} · updated ${updated}`;
+
+    const notes = [];
+    if (d.demo) notes.push('Demo data: these numbers are made up. Add your Help Scout credentials to see real data.');
+    if (d.analyzed.truncated) {
+      notes.push(`Breakdowns use the latest ${fmt(d.analyzed.tickets)} of ${fmt(total)} tickets in this period (raise MAX_PAGES to include more). Totals above are exact.`);
+    }
+    showBanner(notes, false);
+
+    $('t-created').textContent = fmt(total);
+    $('t-created-note').textContent = d.rangeLabel;
+    $('t-open').textContent = fmt(d.status.open);
+    $('t-pending').textContent = fmt(d.status.pending);
+    $('t-closed').textContent = fmt(d.status.closedInPeriod);
+
+    $('chart-title').textContent = `Tickets created per ${d.unit}`;
+    renderChart();
+    $('chart-table').innerHTML =
+      `<tr><th>${d.unit[0].toUpperCase() + d.unit.slice(1)}</th><th class="num">Tickets</th></tr>` +
+      d.created.buckets.map((b) => `<tr><td>${esc(bucketLabel(b.start, d.unit, true))}</td><td class="num">${fmt(b.count)}</td></tr>`).join('');
+
+    const base = d.analyzed.tickets;
+    renderBars($('b-mailbox'), d.breakdowns.mailbox, base, 8, 'mailboxes');
+    renderBars($('b-channel'), d.breakdowns.channel, base, 8, 'channels');
+    renderBars($('b-tag'), d.breakdowns.tag, base, 10, 'tags');
+    renderAgents($('b-agent'), d.breakdowns.agent);
+
+    const companies = d.breakdowns.company;
+    $('company-title').textContent = `By company (${fmt(companies.length)})`;
+    $('company-hint').textContent = d.companySource === 'customer'
+      ? "From the Company field on each customer's Help Scout profile, or their email domain when it's empty."
+      : 'Grouped by the customer\'s email domain. Gmail, Outlook and other personal addresses are grouped as "Personal email".';
+    renderBars($('b-company'), companies, base, state.showAllCompanies ? Infinity : 15, 'companies', true);
+    renderCompanyDetail();
+  }
+
+  function arcPath(cx, cy, R, r, a0, a1) {
+    const large = a1 - a0 > Math.PI ? 1 : 0;
+    const p = (rad, a) => `${(cx + rad * Math.sin(a)).toFixed(2)},${(cy - rad * Math.cos(a)).toFixed(2)}`;
+    return `M${p(R, a0)}A${R},${R} 0 ${large} 1 ${p(R, a1)}L${p(r, a1)}A${r},${r} 0 ${large} 0 ${p(r, a0)}Z`;
+  }
+
+  function periodPhrase(label) {
+    return label.startsWith('Last') ? 'the ' + label.toLowerCase() : label;
+  }
+
+  function renderCompanyDetail() {
+    const el = $('company-detail');
+    const company = state.data.breakdowns.company.find((c) => c.name === state.selectedCompany);
+    if (!company) {
+      el.innerHTML = '<p class="empty">Click a company to see how many of its tickets are open, pending and closed.</p>';
+      return;
+    }
+    const slices = STATUSES.map((st) => ({ ...st, value: company.status[st.key] || 0 }));
+    const total = slices.reduce((a, sl) => a + sl.value, 0);
+    const cx = 100, cy = 100, R = 96, r = 60;
+    let svg = `<svg class="pie" width="200" height="200" viewBox="0 0 200 200" role="img" aria-label="Ticket status for ${esc(company.name)}">`;
+    let angle = 0;
+    for (const sl of slices.filter((x) => x.value > 0)) {
+      const a1 = angle + (sl.value / total) * Math.PI * 2;
+      const data = `data-slice="${sl.label}" data-value="${sl.value}" data-share="${pct(sl.value, total)}"`;
+      svg += sl.value === total
+        ? `<circle class="slice" ${data} cx="${cx}" cy="${cy}" r="${(R + r) / 2}" fill="none" style="stroke:${sl.color};stroke-width:${R - r}px"/>`
+        : `<path class="slice" ${data} fill="${sl.color}" d="${arcPath(cx, cy, R, r, angle, a1)}"/>`;
+      angle = a1;
+    }
+    svg += `<text class="total" x="${cx}" y="${cy}" text-anchor="middle" dy="0.1em">${fmt(total)}</text>`;
+    svg += `<text class="total-label" x="${cx}" y="${cy}" text-anchor="middle" dy="1.7em">tickets</text></svg>`;
+
+    el.innerHTML = `
+      <div class="detail-head">
+        <h3>${esc(company.name)}</h3>
+        <button class="close" id="close-company" aria-label="Close">×</button>
+      </div>
+      <p class="hint" style="margin:4px 0 0">Tickets created in ${esc(periodPhrase(state.data.rangeLabel))}, by current status</p>
+      ${svg}
+      <div class="legend">${slices.filter((sl) => sl.key !== 'other' || sl.value > 0).map((sl) => `
+        <div class="legend-row"><span class="swatch" style="background:${sl.color}"></span><span>${sl.label}</span>
+        <span class="n">${fmt(sl.value)}</span><span class="p">${pct(sl.value, total)}</span></div>`).join('')}
+      </div>`;
+  }
+
+  // The selected company is kept in the URL (#company=…) so a link opens straight to it.
+  function selectCompany(name) {
+    state.selectedCompany = state.selectedCompany === name ? null : name;
+    const url = state.selectedCompany
+      ? '#company=' + encodeURIComponent(state.selectedCompany)
+      : location.pathname + location.search;
+    history.replaceState(null, '', url);
+    render();
+  }
+
+  function niceScale(maxValue) {
+    const raw = Math.max(1, maxValue) / 4;
+    const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const norm = raw / mag;
+    const step = Math.max(1, (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag);
+    return { step, max: step * Math.ceil(Math.max(1, maxValue) / step) };
+  }
+
+  function barPath(x, y, w, h) {
+    const r = Math.min(4, h, w / 2);
+    return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+  }
+
+  function renderChart() {
+    const d = state.data;
+    if (!d) return;
+    const el = $('chart');
+    const buckets = d.created.buckets;
+    const W = el.clientWidth;
+    const H = el.clientHeight;
+    const m = { t: 10, r: 18, b: 26, l: 44 };
+    const iw = W - m.l - m.r;
+    const ih = H - m.t - m.b;
+    const { max, step } = niceScale(Math.max(...buckets.map((b) => b.count)));
+    const y = (v) => m.t + ih - (v / max) * ih;
+    const band = iw / buckets.length;
+    const bw = Math.max(2, Math.min(24, band - 4));
+    const every = Math.ceil(buckets.length / Math.max(1, Math.floor(iw / 64)));
+
+    let s = `<svg width="${W}" height="${H}" role="img" aria-label="Column chart of tickets created per ${d.unit}">`;
+    for (let v = step; v <= max; v += step) {
+      const yy = Math.round(y(v)) + 0.5;
+      s += `<line class="grid" x1="${m.l}" x2="${W - m.r}" y1="${yy}" y2="${yy}"/>`;
+      s += `<text class="tick" x="${m.l - 8}" y="${yy}" dy="0.32em" text-anchor="end">${fmt(v)}</text>`;
+    }
+    const y0 = Math.round(y(0)) + 0.5;
+    s += `<text class="tick" x="${m.l - 8}" y="${y0}" dy="0.32em" text-anchor="end">0</text>`;
+
+    buckets.forEach((b, i) => {
+      const x = m.l + band * i + (band - bw) / 2;
+      const top = y(b.count);
+      if (b.count > 0) s += `<path class="bar" data-i="${i}" d="${barPath(x, top, bw, y(0) - top)}"/>`;
+      if ((buckets.length - 1 - i) % every === 0) {
+        s += `<text class="tick" x="${x + bw / 2}" y="${H - 8}" text-anchor="middle">${esc(bucketLabel(b.start, d.unit, false))}</text>`;
+      }
+    });
+    s += `<line class="axis" x1="${m.l}" x2="${W - m.r}" y1="${y0}" y2="${y0}"/>`;
+    buckets.forEach((b, i) => {
+      s += `<rect class="hit" data-i="${i}" x="${m.l + band * i}" y="${m.t}" width="${band}" height="${ih}"/>`;
+    });
+    el.innerHTML = s + '</svg>';
+  }
+
+  function renderBars(el, items, base, limit, noun, selectable = false) {
+    if (!items.length) {
+      el.innerHTML = '<p class="empty">No tickets in this period.</p>';
+      return;
+    }
+    const top = items.slice(0, limit);
+    const max = top[0].count || 1;
+    el.innerHTML =
+      '<div class="rows">' +
+      top.map((it) => `
+        <div class="row${selectable ? ' clickable' : ''}${selectable && it.name === state.selectedCompany ? ' selected' : ''}" data-name="${esc(it.name)}" data-count="${it.count}" data-share="${pct(it.count, base)}"${selectable ? ` role="button" tabindex="0" aria-pressed="${it.name === state.selectedCompany}"` : ''}>
+          <span class="name" title="${esc(it.name)}">${esc(it.name)}</span>
+          <span class="track"><span class="fill" style="width:${(it.count / max) * 100}%; display:block"></span></span>
+          <span class="num">${fmt(it.count)}</span>
+        </div>`).join('') +
+      '</div>' +
+      (selectable && items.length > 15
+        ? `<button class="more link" id="toggle-all">${limit === Infinity ? 'Show top 15' : `Show all ${fmt(items.length)} ${noun}`}</button>`
+        : items.length > limit ? `<p class="more">+ ${items.length - limit} more ${noun}</p>` : '');
+  }
+
+  function renderAgents(el, agents) {
+    if (!agents.length) {
+      el.innerHTML = '<p class="empty">No tickets in this period.</p>';
+      return;
+    }
+    el.innerHTML =
+      '<table><tr><th>Agent</th><th class="num">Assigned</th><th class="num">Closed</th></tr>' +
+      agents.map((a) => `
+        <tr>
+          <td class="${a.unassigned ? 'muted' : ''}">${esc(a.name)}</td>
+          <td class="num">${fmt(a.assigned)}</td>
+          <td class="num">${a.unassigned ? '–' : fmt(a.closed)}</td>
+        </tr>`).join('') +
+      '</table>';
+  }
+
+  // ---------- Tooltip ----------
+
+  const tip = $('tip');
+
+  function showTip(html, evt) {
+    tip.innerHTML = html;
+    tip.hidden = false;
+    const pad = 12;
+    const r = tip.getBoundingClientRect();
+    let x = evt.clientX + pad;
+    let y = evt.clientY + pad;
+    if (x + r.width > innerWidth - 8) x = evt.clientX - r.width - pad;
+    if (y + r.height > innerHeight - 8) y = evt.clientY - r.height - pad;
+    tip.style.left = Math.max(8, x) + 'px';
+    tip.style.top = Math.max(8, y) + 'px';
+  }
+
+  function hideTip() {
+    tip.hidden = true;
+    document.querySelectorAll('.chart .bar.on').forEach((b) => b.classList.remove('on'));
+  }
+
+  $('chart').addEventListener('pointermove', (evt) => {
+    const hit = evt.target.closest('.hit');
+    if (!hit || !state.data) return hideTip();
+    const i = Number(hit.dataset.i);
+    const b = state.data.created.buckets[i];
+    document.querySelectorAll('.chart .bar').forEach((p) => p.classList.toggle('on', p.dataset.i === String(i)));
+    showTip(`<div class="t">${esc(bucketLabel(b.start, state.data.unit, true))}</div><div class="v">${fmt(b.count)} tickets</div>`, evt);
+  });
+  $('chart').addEventListener('pointerleave', hideTip);
+
+  document.querySelector('.grid4').addEventListener('pointermove', (evt) => {
+    const slice = evt.target.closest('[data-slice]');
+    if (slice) {
+      return showTip(`<div class="t">${esc(slice.dataset.slice)}</div><div class="v">${fmt(slice.dataset.value)} tickets</div><div class="t">${slice.dataset.share} of this company's tickets</div>`, evt);
+    }
+    const row = evt.target.closest('.row');
+    if (!row) return hideTip();
+    showTip(`<div class="t">${esc(row.dataset.name)}</div><div class="v">${fmt(row.dataset.count)} tickets</div><div class="t">${row.dataset.share} of tickets in this period</div>`, evt);
+  });
+  document.querySelector('.grid4').addEventListener('pointerleave', hideTip);
+
+  // ---------- Controls ----------
+
+  $('ranges').addEventListener('click', (evt) => {
+    const btn = evt.target.closest('button[data-range]');
+    if (!btn || btn.dataset.range === state.range) return;
+    state.range = btn.dataset.range;
+    saveRange(state.range);
+    document.querySelectorAll('#ranges button').forEach((b) => b.setAttribute('aria-checked', String(b === btn)));
+    load();
+  });
+  $('refresh').addEventListener('click', () => load(true));
+  $('b-company').addEventListener('click', (evt) => {
+    const row = evt.target.closest('.row.clickable');
+    if (row) return selectCompany(row.dataset.name);
+    if (!evt.target.closest('#toggle-all')) return;
+    state.showAllCompanies = !state.showAllCompanies;
+    render();
+  });
+  $('b-company').addEventListener('keydown', (evt) => {
+    const row = evt.target.closest('.row.clickable');
+    if (!row || (evt.key !== 'Enter' && evt.key !== ' ')) return;
+    evt.preventDefault();
+    const name = row.dataset.name;
+    selectCompany(name);
+    [...document.querySelectorAll('#b-company .row')].find((r) => r.dataset.name === name)?.focus();
+  });
+  $('company-detail').addEventListener('click', (evt) => {
+    if (evt.target.closest('#close-company')) selectCompany(state.selectedCompany);
+  });
+
+  let resizeFrame = 0;
+  addEventListener('resize', () => {
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(renderChart);
+  });
+
+  document.querySelectorAll('#ranges button').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.range === state.range)));
+  load();
+  // Keep a wall-mounted screen current; the server cache keeps this cheap.
+  setInterval(() => load(), 5 * 60 * 1000);
+</script>
+</body>
+</html>

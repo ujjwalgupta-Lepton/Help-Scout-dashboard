@@ -1,0 +1,13 @@
+{
+  "name": "helpscout-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Read-only Help Scout ticket dashboard",
+  "scripts": {
+    "start": "node server.js",
+    "demo": "node server.js --demo"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

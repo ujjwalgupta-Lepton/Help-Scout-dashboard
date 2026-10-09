@@ -1,0 +1,8 @@
+{
+  "outputDirectory": "static",
+  "rewrites": [{ "source": "/", "destination": "/api/index" }],
+  "functions": {
+    "api/index.js": { "includeFiles": "web/**" },
+    "api/summary.js": { "maxDuration": 300 }
+  }
+}
